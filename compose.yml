@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  pgq-db:
+    build:
+      context: ./sql
+    restart: always
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - pgq-net
+
+  pgq-app:
+    build:
+      context: ./api
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: pgq-db
+    ports:
+      - 8000:8000
+    networks:
+      - pgq-net
+
+networks: 
+  pgq-net:
+    driver: bridge
