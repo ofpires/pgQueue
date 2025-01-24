@@ -19,34 +19,11 @@ def connect_db():
         conn = psycopg2.connect(conn_string)
         cur = conn.cursor()
 
-    except:
+    except Exception as e:
         conn = None
         cur = None
 
     return conn, cur 
-
-# @app.post('/message')
-# def add_message(channel: str, message: str):
-#     conn, cur = connect_db()
-
-#     if not conn:
-#         return Response(content={"status":"Error connecting DB. Try later"}, media_type="application/json", status_code=503)
-
-#     INSERT_STR = "INSERT INTO message_queued (channel, message) VALUES (%s, %s) RETURNING id;"
-
-#     try:
-#         cur.execute(INSERT_STR, (channel, message))
-#         rs = cur.fetchone()
-#         data = json.dumps({"status":"Message inserted!", "id": rs[0]})
-#     except:
-#         conn.rollback()
-#         conn.close()
-#         return Response(content='{"status":"Error inserting the message"}', media_type="application/json", status_code=503)
-    
-#     conn.commit()
-#     conn.close()
-
-#     return Response(content=data, media_type="application/json", status_code=201)
 
 @app.post('/message')
 async def add_message(request: Request):
@@ -89,8 +66,8 @@ async def add_message(request: Request):
 
     return Response(content=data, media_type="application/json", status_code=201)
 
-@app.get('/message/{channel}')
-def get_message(channel:str):
+@app.get('/queue/{channel}')
+def get_message_queue(channel:str):
     conn, cur = connect_db()
 
     if not conn:
@@ -119,9 +96,82 @@ def get_message(channel:str):
     conn.close()     
     return Response(content=data, media_type="application/json", status_code=return_code)
 
-#@app.post('/test')
-# async def update_item(payload: Any = Body(None)):
-#     return payload
+@app.get('/queues')
+def get_queues():
+    conn, cur = connect_db()
+
+    if not conn:
+        return Response(content='{"status":"Error connecting DB. Try later"}', media_type="application/json", status_code=503)
+    
+    SELECT_STR = """
+        SELECT json_agg(row_to_json(mq))
+          FROM (SELECT DISTINCT channel 
+                  FROM message_queued
+                 ORDER BY 1) mq;
+    """
+
+    try:
+        cur.execute(SELECT_STR)
+        rows = cur.fetchone()
+
+        if len(rows) > 0:
+            data = json.dumps(rows[0])
+            return_code = 200
+
+        else:
+            data = None
+            return_code = 204
+
+    except Exception as e:
+        print(e)
+        data = '{"status":"Error querying DB"}'
+        return_code = 503
+        conn.rollback()
+
+    conn.close()     
+    return Response(content=data, media_type="application/json", status_code=return_code)
+
+@app.get('/messages')
+def get_messages(channel:str, offset:int = 0, limit:int = 25):
+    conn, cur = connect_db()
+
+    if not conn:
+        return Response(content='{"status":"Error connecting DB. Try later"}', media_type="application/json", status_code=503)
+    
+    SELECT_STR = """
+       SELECT json_agg(row_to_json(mq))
+         FROM (SELECT id, channel, message, created_at::varchar
+                 FROM message_queued 
+                WHERE channel = (%s)
+                ORDER BY id
+               OFFSET (%s)
+                LIMIT (%s)
+    		  ) mq;
+    """
+
+    #Limit the pagination in 300 lines
+    limit = min(limit, 300)
+
+    try:
+        cur.execute(SELECT_STR, (channel, offset, limit))
+        rows = cur.fetchone()
+
+        if len(rows) > 0:
+            data = json.dumps(rows[0])
+            return_code = 200
+
+        else:
+            data = None
+            return_code = 204
+
+
+    except:
+        data = '{"status":"Error querying DB"}'
+        return_code = 503
+        conn.rollback()
+
+    conn.close()     
+    return Response(content=data, media_type="application/json", status_code=return_code)
 
 @app.post("/test")
 async def input_request(request: Request):

@@ -8,7 +8,7 @@ USER = 'postgres'
 PASS = 'postgres'
 
 INSERT_STR = "INSERT INTO message_queued (channel, message) VALUES (%s, %s);"
-CHANNEL = 'one'
+CHANNEL = 'two'
 
 conn_string = f"postgres://{USER}:{PASS}@{HOST}:{PORT}/{DATABASE}"
 
