@@ -96,7 +96,7 @@ def get_message_queue(channel:str):
     conn.close()     
     return Response(content=data, media_type="application/json", status_code=return_code)
 
-@app.get('/queues')
+@app.get('/channels')
 def get_queues():
     conn, cur = connect_db()
 
