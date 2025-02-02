@@ -12,7 +12,7 @@ PASS = os.getenv('POSTGRES_PASSWORD', 'postgres')
 
 app = FastAPI()
 
-# Instrumenta a aplicação para expor as métricas em /metrics
+
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app, endpoint="/metrics")
 
