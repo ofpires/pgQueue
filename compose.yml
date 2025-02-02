@@ -19,10 +19,26 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: pgq-db
     ports:
-      - 8000:8000
+      - "8000:8000"
     networks:
       - pgq-net
 
-networks: 
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - pgq-net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - pgq-net
+
+networks:
   pgq-net:
     driver: bridge
