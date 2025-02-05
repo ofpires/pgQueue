@@ -5,15 +5,15 @@ export const options = {
     scenarios: {
         open_model: {
             executor: 'constant-arrival-rate',
-            rate: 50,
+            rate: 100,
             timeUnit: '1s',
             duration: '3m', 
             preAllocatedVUs: 1000, 
         },
     },
     thresholds: {
-        http_req_failed: ['rate<0.01'], // Menos de 1% de falhas nas requisições
-        http_req_duration: ['p(95)<500'], // 95% das requisições devem ser concluídas em até 500ms
+        http_req_failed: ['rate<0.01'], 
+        http_req_duration: ['p(95)<500'], 
     },
 };
 
@@ -34,7 +34,7 @@ export default function () {
     response = http.post(endpoint.url, endpoint.body, endpoint.params);
   }
 
-  // Verifica se a resposta foi bem-sucedida
+
   check(response, {
     'status is 200 or 201': (r) => r.status === 200 || r.status === 201,
   });

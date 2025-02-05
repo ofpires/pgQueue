@@ -7,6 +7,25 @@
 2. **Python - FastAPI** <img src="https://skillicons.dev/icons?i=py" alt="icon" width="30" height="30"/>
 3. **Docker** <img src="https://skillicons.dev/icons?i=docker" alt="icon" width="30" height="30"/>
 
+---
+## Instrumentation & Monitoring
+
+This application is instrumented with [prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator). The instrumentator automatically collects and exposes various metrics about HTTP requests and system performance. These metrics are available at the `/metrics` endpoint.
+
+**Key Metrics Collected:**
+- `http_requests_total`: Total number of HTTP requests received.
+- `http_request_duration_seconds`: Histogram for the duration of HTTP requests.
+- Additional process and Python-related metrics (e.g., garbage collection, memory usage).
+
+These metrics can be scraped by Prometheus and visualized in Grafana for monitoring and performance analysis.
+
+---
+
+Ensure you run `docker compose up -d` to start all services (Postgres, API, Prometheus, and Grafana).  
+- **Prometheus** is available at: [http://localhost:9090](http://localhost:9090)
+- **Grafana** is available at: [http://localhost:3000](http://localhost:3000)  
+  In Grafana, configure the Prometheus data source with the URL `http://prometheus:9090` (within the Docker network).
+
 After running ***docker compose up -d*** in the project root directory, you can run the ***python support/load.py*** script to insert messages into Postgresql. Adjust the Postgres connection string variables before running.
 
 ---
@@ -112,21 +131,6 @@ Returns a JSON array containing a list of existing channels in queued messages. 
 ]
 ```
 
----
-
-## Instrumentation & Monitoring
-
-This application is instrumented with [prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator). The instrumentator automatically collects and exposes various metrics about HTTP requests and system performance. These metrics are available at the `/metrics` endpoint.
-
-**Key Metrics Collected:**
-- `http_requests_total`: Total number of HTTP requests received.
-- `http_request_duration_seconds`: Histogram for the duration of HTTP requests.
-- Additional process and Python-related metrics (e.g., garbage collection, memory usage).
-
-These metrics can be scraped by Prometheus and visualized in Grafana for monitoring and performance analysis.
-
----
-
 ## Load Testing with k6
 
 A load test script (`load-test.js`) is provided in the `performance` folder to simulate load on the following API endpoints:
@@ -146,6 +150,17 @@ A load test script (`load-test.js`) is provided in the `performance` folder to s
    ```
    This will generate load on the specified endpoints, allowing you to monitor real-time metrics (such as the request rate and average response time) via Prometheus and Grafana.
 
+3. **Generate an HTML Report:**  
+   Alternatively, to run the load test and export a live HTML dashboard report, run:
+   ```bash
+   K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_EXPORT=performance/results/html-report.html k6 run performance/load-test.js
+   ```
+   **Explanation:**  
+   - `K6_WEB_DASHBOARD=true` enables the k6 web dashboard, which provides a live, interactive overview of the test's progress.  
+   - `K6_WEB_DASHBOARD_EXPORT=performance/results/html-report.html` specifies that an HTML report should be generated and saved at the given path once the test completes.  
+   - This command not only runs the test but also creates a detailed HTML report that you can review later for performance insights.
+
+
 ---
 
 ## Monitoring Specific Endpoints in Grafana
@@ -154,28 +169,19 @@ To monitor only the endpoints `/queue/two` and `/message`, you can use the follo
 
 - **Total Requests (filtered):**
   ```promql
-  http_requests_total{status="2xx", handler=~"/queue/two|/message"}
+  increase(http_requests_total{status=~"2xx", handler=~"/queue/{channel}|/message"}[1m])
   ```
 - **Average Response Time (filtered):**
   ```promql
-  rate(http_request_duration_seconds_sum{handler=~"/queue/two|/message"}[1m])
+  rate(http_request_duration_seconds_sum{handler=~"/queue/{channel}|/message"}[1m])
     /
-  rate(http_request_duration_seconds_count{handler=~"/queue/two|/message"}[1m])
+  rate(http_request_duration_seconds_count{handler=~"/queue/{channel}|/message"}[1m])
   ```
 
 For real-time monitoring (i.e., to see the current load instead of a cumulative counter), consider using functions such as `irate()` or `increase()`. For example, to view the current request rate:
 ```promql
 irate(http_requests_total{status="2xx", handler=~"/queue/two|/message"}[1m])
 ```
-
----
-
-## Docker Compose
-
-Ensure you run `docker compose up -d` to start all services (Postgres, API, Prometheus, and Grafana).  
-- **Prometheus** is available at: [http://localhost:9090](http://localhost:9090)
-- **Grafana** is available at: [http://localhost:3000](http://localhost:3000)  
-  In Grafana, configure the Prometheus data source with the URL `http://prometheus:9090` (within the Docker network).
 
 ---
 
