@@ -2,6 +2,7 @@ from fastapi import FastAPI, Response, Request
 import json
 import psycopg2
 import os
+from prometheus_fastapi_instrumentator import Instrumentator
 
 HOST = os.getenv('POSTGRES_HOST', 'localhost')    #'pgq-db'
 DATABASE = 'pgQueue'
@@ -10,6 +11,10 @@ USER = 'postgres'
 PASS = os.getenv('POSTGRES_PASSWORD', 'postgres')
 
 app = FastAPI()
+
+
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app, endpoint="/metrics")
 
 def connect_db():
 
